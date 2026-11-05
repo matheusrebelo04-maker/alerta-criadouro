@@ -5,7 +5,7 @@ Tema: CitizenTech - da cidade ao campo, tecnologia para a vida cotidiana
 
 **Integrantes**
 
-- Matheus Rebelo da Silva de Jesus - RM 570260
+- Matheus Rebelo - RM 570260
 - Felipe Olmos - RM 570946
 - Luiz Guilherme - RM 573486
 
