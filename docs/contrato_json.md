@@ -2,7 +2,7 @@
 
 Global Solution 2026.2 - FIAP - Tecnólogo em IA - turma 1TIAPZ
 
-- Matheus Rebelo da Silva de Jesus - RM 570260
+- Matheus Rebelo - RM 570260
 - Felipe Olmos - RM 570946
 - Luiz Guilherme - RM 573486
 
