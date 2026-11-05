@@ -1,6 +1,6 @@
 # Alerta Criadouro - API que recebe as leituras do dispositivo
 # Global Solution 2026.2 - FIAP - 1TIAPZ
-# Matheus Rebelo da Silva de Jesus - RM 570260
+# Matheus Rebelo - RM 570260
 # Felipe Olmos - RM 570946
 # Luiz Guilherme - RM 573486
 #
@@ -13,6 +13,7 @@
 import csv
 import logging
 import os
+import re
 import time
 from collections import defaultdict, deque
 from datetime import datetime
@@ -36,6 +37,9 @@ COLUNAS_CSV = [
     "nivel_agua_cm", "dias_agua_parada", "status", "nivel_risco", "alerta",
 ]
 
+# só letras minúsculas, números e hífen (evita fórmula maliciosa no CSV)
+PADRAO_ID = re.compile(r"^[a-z0-9-]{3,40}$")
+
 # faixas aceitas para cada valor (fora disso a leitura é recusada)
 FAIXAS = {
     "temperatura_c": (-10, 60),
@@ -49,6 +53,7 @@ log = logging.getLogger("alerta_criadouro")
 log.setLevel(logging.INFO)
 if not log.handlers:
     formato = logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S")
+    formato.converter = lambda *args: datetime.now(FUSO).timetuple()  # horário de São Paulo
     for destino in (logging.FileHandler(ARQUIVO_LOG, encoding="utf-8"), logging.StreamHandler()):
         destino.setFormatter(formato)
         log.addHandler(destino)
@@ -84,8 +89,8 @@ def validar(dados):
             erros.append(f"campo obrigatorio ausente: {campo}")
 
     dispositivo = dados.get("dispositivo_id")
-    if dispositivo is not None and (not isinstance(dispositivo, str) or not dispositivo.strip()):
-        erros.append("dispositivo_id precisa ser um texto")
+    if dispositivo is not None and (not isinstance(dispositivo, str) or not PADRAO_ID.match(dispositivo)):
+        erros.append("dispositivo_id invalido (use so letras minusculas, numeros e hifen)")
     if dados.get("metrica") is not None and dados["metrica"] != "dias_agua_parada":
         erros.append("metrica precisa ser dias_agua_parada")
 
