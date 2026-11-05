@@ -1,7 +1,7 @@
 # Base de dados: InfoDengue - cidade de São Paulo
 
 Global Solution 2026.2 - FIAP - 1TIAPZ
-Matheus Rebelo da Silva de Jesus (RM 570260), Felipe Olmos (RM 570946), Luiz Guilherme (RM 573486)
+Matheus Rebelo (RM 570260), Felipe Olmos (RM 570946), Luiz Guilherme (RM 573486)
 
 **Fonte:** InfoDengue, sistema de alerta da Fiocruz e da FGV, que junta as notificações de dengue do SINAN com dados de clima.
 **Link usado:** https://info.dengue.mat.br/api/alertcity?geocode=3550308&disease=dengue&format=csv&ew_start=1&ew_end=53&ey_start=2015&ey_end=2025
@@ -36,3 +36,11 @@ Ela junta, na mesma semana, o número de casos de dengue e o clima da cidade (te
 - Das 574 semanas, 283 ficaram no nível 1 (verde), 66 no 2, 90 no 3 e 135 no 4 (vermelho).
 - 13 semanas estão sem os dados de clima (tempmed, tempmax e umidades). Cada parte do projeto explica como tratou essas semanas.
 - As colunas casprov_est, casprov_est_min, casprov_est_max e casconf vêm vazias e não são usadas.
+
+## Hash de integridade
+
+SHA-256 do arquivo infodengue_sp_2015_2025.csv:
+
+`741ccfb2a01cf5d98614fcffd4ddfaf41a748b4b0549211435879c1bec97a03b`
+
+Os notebooks de Machine Learning e de Redes Neurais calculam esse hash antes de treinar. Se o arquivo tiver sido alterado, o treino para. Isso protege os modelos de IA contra uma base adulterada (explicado no relatório de Cybersecurity).
