@@ -9,6 +9,8 @@
 #   POST /leituras      - recebe o JSON do ESP32, valida, classifica e grava no CSV
 #   GET  /leituras      - lista as leituras gravadas
 #   GET  /indicadores   - números calculados a partir das leituras
+#   GET  /previsao      - risco da próxima semana (ML) + casos das próximas 4 semanas (LSTM)
+#                         + status do quintal = mensagem final para a família
 
 import csv
 import logging
@@ -48,6 +50,7 @@ FAIXAS = {
 }
 
 app = Flask(__name__)
+app.json.ensure_ascii = False   # acentos legíveis nas respostas
 
 log = logging.getLogger("alerta_criadouro")
 log.setLevel(logging.INFO)
@@ -244,6 +247,30 @@ def indicadores():
         "ultimo_status": linhas[-1]["status"],
         "ultima_leitura_em": linhas[-1]["data_hora"],
     })
+
+
+@app.get("/previsao")
+def previsao():
+    if not token_valido():
+        log.warning("RECUSADO consulta sem token ip=%s", ip_do_cliente())
+        return jsonify({"erro": "token ausente ou invalido"}), 401
+    # status do quintal = última leitura gravada do aparelho
+    linhas = ler_csv()
+    dispositivo = request.args.get("dispositivo")
+    if dispositivo:
+        linhas = [l for l in linhas if l["dispositivo_id"] == dispositivo]
+    status_quintal = linhas[-1]["status"] if linhas else None
+
+    from previsao import gerar_previsao   # carrega as IAs só quando precisa
+    try:
+        resultado = gerar_previsao(status_quintal)
+    except Exception as erro:
+        log.warning("PREVISAO indisponivel: %s", erro)
+        return jsonify({"erro": "previsao indisponivel no momento", "status_quintal": status_quintal}), 503
+    log.info("PREVISAO risco=%s tendencia=%s quintal=%s",
+             resultado["risco_proxima_semana"]["probabilidade_risco_alto"],
+             resultado["casos_proximas_semanas"]["tendencia"], status_quintal)
+    return jsonify(resultado)
 
 
 if __name__ == "__main__":
