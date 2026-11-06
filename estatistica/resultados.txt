@@ -1,0 +1,153 @@
+======================================================================
+BASE DE DADOS
+======================================================================
+Semanas: 561 | de 2015-01-04 a 2025-12-28
+                       count       mean  ...        75%        max
+semana_epidemiologica  561.0  202031.89  ...  202317.00  202553.00
+casos                  561.0    3453.81  ...    2007.00   85389.00
+casos_por_100mil       561.0      28.27  ...      16.45     699.90
+rt                     561.0       1.07  ...       1.20       4.60
+nivel_alerta           561.0       2.16  ...       3.00       4.00
+temp_minima            561.0      16.98  ...      19.14      22.77
+temp_media             561.0      19.40  ...      21.53      26.88
+temp_maxima            561.0      22.86  ...      25.57      33.50
+umid_minima            561.0      61.02  ...      71.38      88.65
+umid_media             561.0      77.70  ...      82.73      91.02
+umid_maxima            561.0      88.62  ...      92.25      99.11
+
+[11 rows x 8 columns]
+
+======================================================================
+ITEM 2 - DISTRIBUIÇÃO NORMAL (temperatura média semanal, °C)
+======================================================================
+Média = 19.3990 °C | Mediana = 19.7460 °C | Desvio padrão = 2.8879 °C
+a) P(X < 19.40) = 0.5000 (50.00%) -> evento equiprovável (mesma chance de acontecer ou não)
+b) P(X > 19.75) = 0.4522 (45.22%) | z = 0.1201 -> evento improvável (pouco provável)
+
+======================================================================
+ITEM 3 - TESTE DE HIPÓTESE PARA A MÉDIA (temperatura média semanal)
+======================================================================
+Média populacional de referência = 19.3990 °C | Desvio padrão populacional = 2.8854 °C
+a) Teste unilateral à esquerda
+n = 20 | alfa = 6% | H0: mu = 19.40 | H1: mu < mu0
+   Média da amostra = 19.3967 °C | Erro padrão = 0.6452
+   Z calculado = -0.0037 | Z crítico = -1.5548 | p-valor = 0.4985
+   Decisão: NÃO REJEITA H0
+b) Teste unilateral à direita
+n = 25 | alfa = 9% | H0: mu = 19.40 | H1: mu > mu0
+   Média da amostra = 19.7539 °C | Erro padrão = 0.5771
+   Z calculado = 0.6150 | Z crítico = 1.3408 | p-valor = 0.2693
+   Decisão: NÃO REJEITA H0
+
+======================================================================
+ITEM 4 - ANÁLISE BIVARIADA: temperatura média (X) x Rt (Y)
+======================================================================
+b) Covariância = 0.5173 | Correlação de Pearson r = 0.4052 (p-valor = 1.41e-23)
+d) Equação: Rt = -0.1380 +0.0620 x temp_media
+e) R² = 0.1642 | F = 109.79 | p-valor do F = 1.41e-23
+f) Previsão: semana com temperatura média de 25.0 °C -> Rt = 1.412
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                     rt   R-squared:                       0.164
+Model:                            OLS   Adj. R-squared:                  0.163
+Method:                 Least Squares   F-statistic:                     109.8
+Date:                Fri, 06 Nov 2026   Prob (F-statistic):           1.41e-23
+Time:                        10:04:52   Log-Likelihood:                -287.28
+No. Observations:                 561   AIC:                             578.6
+Df Residuals:                     559   BIC:                             587.2
+Df Model:                           1                                         
+Covariance Type:            nonrobust                                         
+==============================================================================
+                 coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+const         -0.1380      0.116     -1.189      0.235      -0.366       0.090
+temp_media     0.0620      0.006     10.478      0.000       0.050       0.074
+==============================================================================
+Omnibus:                      396.674   Durbin-Watson:                   0.813
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):             8438.195
+Skew:                           2.817   Prob(JB):                         0.00
+Kurtosis:                      21.146   Cond. No.                         134.
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+
+======================================================================
+ITEM 5 - ANÁLISE MULTIVARIADA: Rt ~ temp_media + umid_media + umid_maxima
+======================================================================
+b) Matriz de covariância:
+                 rt  temp_media  umid_media  umid_maxima
+rt           0.1954      0.5173      0.0776       0.0709
+temp_media   0.5173      8.3403     -4.8418      -1.0561
+umid_media   0.0776     -4.8418     49.6285      26.5157
+umid_maxima  0.0709     -1.0561     26.5157      29.5850
+b) Matriz de correlação de Pearson:
+                 rt  temp_media  umid_media  umid_maxima
+rt           1.0000      0.4052      0.0249       0.0295
+temp_media   0.4052      1.0000     -0.2380      -0.0672
+umid_media   0.0249     -0.2380      1.0000       0.6920
+umid_maxima  0.0295     -0.0672      0.6920       1.0000
+d) Equação: Rt = -0.6550 +0.0676 x temp_media +0.0107 x umid_media -0.0048 x umid_maxima
+e) R² = 0.1816 | R² ajustado = 0.1771 | F = 41.19 | p-valor do F = 4.75e-24
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                     rt   R-squared:                       0.182
+Model:                            OLS   Adj. R-squared:                  0.177
+Method:                 Least Squares   F-statistic:                     41.19
+Date:                Fri, 06 Nov 2026   Prob (F-statistic):           4.75e-24
+Time:                        10:04:53   Log-Likelihood:                -281.38
+No. Observations:                 561   AIC:                             570.8
+Df Residuals:                     557   BIC:                             588.1
+Df Model:                           3                                         
+Covariance Type:            nonrobust                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+const          -0.6550      0.308     -2.124      0.034      -1.261      -0.049
+temp_media      0.0676      0.006     11.088      0.000       0.056       0.080
+umid_media      0.0107      0.003      3.104      0.002       0.004       0.018
+umid_maxima    -0.0048      0.004     -1.102      0.271      -0.013       0.004
+==============================================================================
+Omnibus:                      398.296   Durbin-Watson:                   0.820
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):             8603.554
+Skew:                           2.828   Prob(JB):                         0.00
+Kurtosis:                      21.333   Cond. No.                     2.18e+03
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[2] The condition number is large, 2.18e+03. This might indicate that there are
+strong multicollinearity or other numerical problems.
+f) Previsão: temp_media 25 °C, umid_media 80%, umid_maxima 95% -> Rt = 1.438
+
+======================================================================
+ITEM 6 - REGRESSÃO LOGÍSTICA: espalhando = 1 se Rt > 1
+======================================================================
+Semanas com Rt > 1: 269 de 561
+a) Equação: P(Rt>1) = 1 / (1 + e^-(-11.7516 +0.3831 x temp_media +0.0487 x umid_media +0.0051 x umid_maxima))
+                           Logit Regression Results                           
+==============================================================================
+Dep. Variable:             espalhando   No. Observations:                  392
+Model:                          Logit   Df Residuals:                      388
+Method:                           MLE   Df Model:                            3
+Date:                Fri, 06 Nov 2026   Pseudo R-squ.:                  0.1596
+Time:                        10:04:54   Log-Likelihood:                -228.08
+converged:                       True   LL-Null:                       -271.39
+Covariance Type:            nonrobust   LLR p-value:                 1.168e-18
+===============================================================================
+                  coef    std err          z      P>|z|      [0.025      0.975]
+-------------------------------------------------------------------------------
+const         -11.7516      2.201     -5.339      0.000     -16.065      -7.438
+temp_media      0.3831      0.048      8.052      0.000       0.290       0.476
+umid_media      0.0487      0.023      2.113      0.035       0.004       0.094
+umid_maxima     0.0051      0.030      0.172      0.863      -0.053       0.063
+===============================================================================
+b) Matriz de confusão (teste, 30% das semanas) [linhas = real, colunas = previsto]:
+[[56 32]
+ [19 62]]
+b) Acurácia no teste = 0.6982 (69.8%)
+   Proporção da classe mais comum no teste = 0.5207
+c) Semana com 25.0 °C, umid. média 80.0% e máxima 95.0% -> P(Rt>1) = 0.901 -> ESPALHANDO (Rt > 1)
+c) Semana com 16.0 °C, umid. média 70.0% e máxima 85.0% -> P(Rt>1) = 0.144 -> NÃO espalhando
+
+Gráficos salvos em: /home/claude/alerta-criadouro/estatistica/graficos

@@ -1,0 +1,78 @@
+Alerta Criadouro - saida real do notebook api/rodar_api_colab.ipynb (Google Colab, 05/11/2026)
+Matheus Rebelo (RM 570260), Felipe Olmos (RM 570946), Luiz Guilherme (RM 573486)
+
+API no ar em: https://vsnet-adequate-spaces-era.trycloudflare.com
+
+==== Celula 3: testar_api.py pela internet ====
+============================================================
+Cenario 1 - potinho seco (esperado OK)
+Enviado: {"dispositivo_id": "esp32-quintal-001", "tipo_dispositivo": "esp32", "latitude": -23.541, "longitude": -46.471, "metrica": "dias_agua_parada", "valor": 0, "leituras": {"temperatura_c": 22.5, "umidade_pct": 60.0, "distancia_cm": 12.0}}
+HTTP 201
+Resposta: {"alerta": false, "dispositivo_id": "esp32-quintal-001", "id": 1, "metrica": "dias_agua_parada", "nivel_risco": "normal", "status": "OK", "valor": 0}
+============================================================
+Cenario 2 - agua parada ha 1 dia (esperado ATENCAO)
+Enviado: {"dispositivo_id": "esp32-quintal-001", "tipo_dispositivo": "esp32", "latitude": -23.541, "longitude": -46.471, "metrica": "dias_agua_parada", "valor": 1, "leituras": {"temperatura_c": 27.0, "umidade_pct": 75.0, "distancia_cm": 8.0}}
+HTTP 201
+Resposta: {"alerta": false, "dispositivo_id": "esp32-quintal-001", "id": 2, "metrica": "dias_agua_parada", "nivel_risco": "atencao", "status": "ATENCAO", "valor": 1}
+============================================================
+Cenario 3 - agua ha 3 dias com calor e umidade (esperado ALERTA)
+Enviado: {"dispositivo_id": "esp32-quintal-001", "tipo_dispositivo": "esp32", "latitude": -23.541, "longitude": -46.471, "metrica": "dias_agua_parada", "valor": 3, "leituras": {"temperatura_c": 29.4, "umidade_pct": 78.0, "distancia_cm": 7.5}}
+HTTP 201
+Resposta: {"alerta": true, "dispositivo_id": "esp32-quintal-001", "id": 3, "metrica": "dias_agua_parada", "nivel_risco": "critico", "status": "ALERTA", "valor": 3}
+============================================================
+Teste extra - leitura invalida (sem valor e temperatura absurda)
+Enviado: {"dispositivo_id": "esp32-quintal-001", "tipo_dispositivo": "esp32", "latitude": -23.541, "longitude": -46.471, "metrica": "dias_agua_parada", "leituras": {"temperatura_c": 150.0, "umidade_pct": 78.0, "distancia_cm": 7.5}}
+HTTP 400
+Resposta: {"detalhes": ["campo obrigatorio ausente: valor", "temperatura_c fora da faixa (-10 a 60)"], "erro": "leitura recusada"}
+============================================================
+Teste extra - sem token do dispositivo
+HTTP 401
+Resposta: {"erro": "token do dispositivo ausente ou invalido"}
+============================================================
+Consulta GET /leituras
+HTTP 200
+Resposta: {"leituras": [{"alerta": "False", "data_hora": "2026-11-05 18:26:07", "dias_agua_parada": "0", "dispositivo_id": "esp32-quintal-001", "distancia_cm": "12.0", "nivel_agua_cm": "0.0", "nivel_risco": "normal", "status": "OK", "temperatura_c": "22.5", "umidade_pct": "60.0"}, {"alerta": "False", "data_hora": "2026-11-05 18:26:07", "dias_agua_parada": "1", "dispositivo_id": "esp32-quintal-001", "distancia_cm": "8.0", "nivel_agua_cm": "4.0", "nivel_risco": "atencao", "status": "ATENCAO", "temperatura_c": "27.0", "umidade_pct": "75.0"}, {"alerta": "True", "data_hora": "2026-11-05 18:26:07", "dias_agua_parada": "3", "dispositivo_id": "esp32-quintal-001", "distancia_cm": "7.5", "nivel_agua_cm": "4.5", "nivel_risco": "critico", "status": "ALERTA", "temperatura_c": "29.4", "umidade_pct": "78.0"}], "total": 3}
+============================================================
+Consulta GET /indicadores
+HTTP 200
+Resposta: {"leituras_por_status": {"ALERTA": 1, "ATENCAO": 1, "OK": 1}, "maior_numero_de_dias_com_agua": 3, "percentual_em_alerta": 33.3, "temperatura_media": 26.3, "total_alertas": 1, "total_leituras": 3, "ultima_leitura_em": "2026-11-05 18:26:07", "ultimo_status": "ALERTA", "umidade_media": 71.0}
+
+==== leituras.csv depois do Wokwi (colunas principais) ====
+data_hora temperatura_c umidade_pct dias_agua_parada status
+2026-11-05 18:26:07 22.5 60.0 0 OK
+2026-11-05 18:26:07 27.0 75.0 1 ATENCAO
+2026-11-05 18:26:07 29.4 78.0 3 ALERTA
+2026-11-05 18:34:20 29 78 0 OK
+2026-11-05 18:34:27 29 78 0 OK
+2026-11-05 18:35:00 29 78 0 OK
+2026-11-05 18:35:08 29 78 0 OK
+2026-11-05 18:35:17 29 78 0 OK
+2026-11-05 18:35:26 29 78 0 OK
+2026-11-05 18:35:36 29 78 0 OK
+2026-11-05 18:35:45 29 78 0 OK
+2026-11-05 18:35:49 29 78 1 ATENCAO
+2026-11-05 18:36:00 29 78 1 ATENCAO
+2026-11-05 18:36:08 29 78 2 ATENCAO
+2026-11-05 18:36:18 29 78 2 ATENCAO
+2026-11-05 18:36:36 29 78 3 ALERTA
+2026-11-05 18:36:47 29 78 3 ALERTA
+2026-11-05 18:36:54 29 78 4 ALERTA
+
+==== seguranca.log (horario em UTC nesta execucao; o codigo ja foi ajustado para o horario de Sao Paulo) ====
+2026-11-05 21:26:07 INFO ACEITO ip=35.224.62.32 dispositivo=esp32-quintal-001 dias=0 temp=22.5 umid=60.0 status=OK
+2026-11-05 21:26:07 INFO ACEITO ip=35.224.62.32 dispositivo=esp32-quintal-001 dias=1 temp=27.0 umid=75.0 status=ATENCAO
+2026-11-05 21:26:07 INFO ACEITO ip=35.224.62.32 dispositivo=esp32-quintal-001 dias=3 temp=29.4 umid=78.0 status=ALERTA
+2026-11-05 21:26:07 WARNING RECUSADO dados invalidos ip=35.224.62.32 erros=['campo obrigatorio ausente: valor', 'temperatura_c fora da faixa (-10 a 60)']
+2026-11-05 21:26:07 WARNING RECUSADO token invalido ip=35.224.62.32
+2026-11-05 21:34:20 INFO ACEITO ip=204.93.239.19 dispositivo=esp32-quintal-001 dias=0 temp=29 umid=78 status=OK
+2026-11-05 21:35:49 INFO ACEITO ip=204.93.239.19 dispositivo=esp32-quintal-001 dias=1 temp=29 umid=78 status=ATENCAO
+2026-11-05 21:36:08 INFO ACEITO ip=204.93.239.19 dispositivo=esp32-quintal-001 dias=2 temp=29 umid=78 status=ATENCAO
+2026-11-05 21:36:36 INFO ACEITO ip=204.93.239.19 dispositivo=esp32-quintal-001 dias=3 temp=29 umid=78 status=ALERTA
+2026-11-05 21:36:54 INFO ACEITO ip=204.93.239.19 dispositivo=esp32-quintal-001 dias=4 temp=29 umid=78 status=ALERTA
+(linhas OK repetidas entre 21:34:20 e 21:35:45 omitidas aqui; aparecem no print 05)
+
+==== Teste de protecao (token errado e rajada de envios) ====
+token errado: 401
+rajada de 25 envios: [401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 429, 429, 429, 429, 429, 429]
+21:39:11 WARNING RECUSADO token invalido ip=35.224.62.32
+21:39:11 WARNING BLOQUEADO por excesso de requisicoes ip=35.224.62.32
