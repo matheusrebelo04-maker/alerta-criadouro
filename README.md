@@ -50,6 +50,7 @@ Os modelos de IA usam dados reais do InfoDengue (Fiocruz e FGV) da cidade de Sã
 | [estatistica](estatistica) | Código .py, base .csv, relatório e gráficos | Statistical Computing with R & Python |
 | [ml](ml) | Notebook, slides e modelo do risco da próxima semana | Machine Learning & Modelling |
 | [redes_neurais](redes_neurais) | Notebook, documentação e rede LSTM dos casos das próximas semanas | Redes Neurais, Deep Learning e Algoritmos Genéticos |
+| [aws](aws) | Lambda, tabela do RDS, simulador do aparelho, relatório e prints da nuvem | Plataformas, Serviços Cognitivos & Cloud Computing |
 | [docs](docs) | Relatórios de AICSS, Python e Cybersecurity, contrato JSON e evidências | todas |
 
 ## Resultados
@@ -59,6 +60,7 @@ Os modelos de IA usam dados reais do InfoDengue (Fiocruz e FGV) da cidade de Sã
 - **Estatística:** a temperatura média da semana tem correlação de 0,41 com o Rt da dengue. A regressão logística acerta 69,8% das semanas em que a dengue está se espalhando.
 - **Machine Learning:** Random Forest ajustado com F1 de 0,954 no teste (2023 a 2025). Ele avisou o risco alto do começo da epidemia de 2024 uma semana antes do que repetir o nível atual.
 - **Redes Neurais:** LSTM com erro menor que o modelo ingênuo nas 4 semanas à frente, ligada à API pela rota GET /previsao.
+- **AWS:** Lambda com Function URL recebe as leituras, registra tudo no CloudWatch, lê o relato da família com um modelo da Hugging Face e grava no RDS PostgreSQL. No teste, 10 leituras gravadas e alerta crítico a partir do dia 4.
 
 ## Como rodar
 
