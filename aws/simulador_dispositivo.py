@@ -33,8 +33,8 @@ QUINTAIS = {
 
 RELATOS = {
     "normal": [
-        "Olhei o quintal hoje e está tudo seco, sem água parada",
-        "Virei os baldes e limpei a calha, tudo tranquilo",
+        "Virei os baldes e limpei a calha, ficou ótimo",
+        "Passei no quintal agora e está tudo certo por aqui",
     ],
     "risco": [
         "Choveu forte hoje e o quintal ficou cheio de poças",

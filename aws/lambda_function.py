@@ -15,7 +15,7 @@ Rotas (Function URL):
 Variáveis de ambiente:
   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD   (RDS PostgreSQL)
   HF_TOKEN      token gratuito do tipo Read da Hugging Face (usado para baixar o modelo)
-  HF_MODEL      padrão: Xenova/distilbert-base-multilingual-cased-sentiments-student
+  HF_MODEL      padrão: onnx-community/twitter-xlm-roberta-base-sentiment-ONNX
   TOKEN_DISPOSITIVO (opcional) se definido, o POST exige o cabeçalho X-Token-Dispositivo
 
 IA (caminho A - Hugging Face): o modelo de sentimento é baixado do Hub da Hugging Face
@@ -41,7 +41,7 @@ from tokenizers import Tokenizer
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-HF_MODEL = os.environ.get("HF_MODEL", "Xenova/distilbert-base-multilingual-cased-sentiments-student")
+HF_MODEL = os.environ.get("HF_MODEL", "onnx-community/twitter-xlm-roberta-base-sentiment-ONNX")
 HF_TOKEN = os.environ.get("HF_TOKEN")
 PASTA_MODELO = "/tmp/modelo"
 ARQUIVOS_MODELO = {               # arquivo no Hub -> nome local
