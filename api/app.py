@@ -7,16 +7,19 @@
 # Rotas:
 #   GET  /health        - mostra se a API está no ar
 #   POST /leituras      - recebe o JSON do ESP32, valida, classifica e grava no CSV
+#                         (se URL_NUVEM estiver definida, reenvia a leitura para a Lambda da AWS)
 #   GET  /leituras      - lista as leituras gravadas
 #   GET  /indicadores   - números calculados a partir das leituras
 #   GET  /previsao      - risco da próxima semana (ML) + casos das próximas 4 semanas (LSTM)
 #                         + status do quintal = mensagem final para a família
 
 import csv
+import json
 import logging
 import os
 import re
 import time
+import urllib.request
 from collections import defaultdict, deque
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -33,6 +36,10 @@ FUSO = ZoneInfo("America/Sao_Paulo")
 # o token não fica no código: vem de variável de ambiente
 TOKEN_DISPOSITIVO = os.environ.get("TOKEN_DISPOSITIVO")
 LIMITE_POR_MINUTO = int(os.environ.get("LIMITE_POR_MINUTO", "20"))
+
+# endereço da Lambda na AWS (opcional). Sem ele a API funciona só com o CSV.
+URL_NUVEM = os.environ.get("URL_NUVEM", "").rstrip("/")
+TEMPO_NUVEM = 8   # segundos de espera pela resposta da nuvem
 
 COLUNAS_CSV = [
     "data_hora", "dispositivo_id", "temperatura_c", "umidade_pct", "distancia_cm",
@@ -135,6 +142,46 @@ def ler_csv():
         return list(csv.DictReader(arquivo))
 
 
+def enviar_para_nuvem(dados, nivel):
+    """Reenvia a leitura para a Lambda da AWS. Se a nuvem falhar, a API segue normal."""
+    if not URL_NUVEM.startswith("http"):
+        return None
+
+    leituras = dict(dados.get("leituras", {}))
+    if nivel is not None:
+        leituras["nivel_agua_cm"] = nivel
+    corpo = {
+        "dispositivo_id": dados["dispositivo_id"],
+        "tipo_dispositivo": dados.get("tipo_dispositivo", "esp32"),
+        "metrica": dados["metrica"],
+        "valor": dados["valor"],
+        "leituras": leituras,
+    }
+    # a localização segue só com 3 casas decimais (mostra o bairro, não a casa)
+    for campo in ("latitude", "longitude"):
+        if isinstance(dados.get(campo), (int, float)):
+            corpo[campo] = round(dados[campo], 3)
+    for campo in ("relato", "medido_em"):
+        if dados.get(campo):
+            corpo[campo] = dados[campo]
+
+    pedido = urllib.request.Request(
+        URL_NUVEM + "/ocorrencias",
+        data=json.dumps(corpo).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(pedido, timeout=TEMPO_NUVEM) as resposta:
+            retorno = json.loads(resposta.read().decode("utf-8"))
+        log.info("NUVEM gravado id=%s nivel_risco=%s", retorno.get("id"), retorno.get("nivel_risco"))
+        return "gravado"
+    except Exception as erro:
+        # a nuvem é um complemento: o aviso local e o CSV não dependem dela
+        log.warning("NUVEM indisponivel: %s", erro)
+        return "indisponivel"
+
+
 def token_valido():
     token = request.headers.get("X-Token-Dispositivo")
     return bool(TOKEN_DISPOSITIVO) and token == TOKEN_DISPOSITIVO
@@ -142,7 +189,7 @@ def token_valido():
 
 @app.get("/health")
 def health():
-    return jsonify({"status": "ok", "servico": "alerta-criadouro"})
+    return jsonify({"status": "ok", "servico": "alerta-criadouro", "nuvem_configurada": bool(URL_NUVEM)})
 
 
 @app.post("/leituras")
@@ -194,7 +241,7 @@ def receber_leitura():
     log.info("ACEITO ip=%s dispositivo=%s dias=%s temp=%s umid=%s status=%s",
              ip, dados["dispositivo_id"], dias, temperatura, umidade, status)
 
-    return jsonify({
+    resposta = {
         "id": total,
         "dispositivo_id": dados["dispositivo_id"],
         "metrica": "dias_agua_parada",
@@ -202,7 +249,11 @@ def receber_leitura():
         "status": status,
         "nivel_risco": NIVEL_RISCO[status],
         "alerta": status == "ALERTA",
-    }), 201
+    }
+    nuvem = enviar_para_nuvem(dados, nivel)
+    if nuvem:
+        resposta["nuvem"] = nuvem   # "gravado" ou "indisponivel"
+    return jsonify(resposta), 201
 
 
 @app.get("/leituras")
