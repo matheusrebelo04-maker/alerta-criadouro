@@ -14,28 +14,42 @@ Rotas (Function URL):
 
 Variáveis de ambiente:
   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD   (RDS PostgreSQL)
-  HF_TOKEN      token gratuito do tipo Read da Hugging Face
-  HF_MODEL      padrão: cardiffnlp/twitter-xlm-roberta-base-sentiment
-  HF_API_URL    padrão: https://router.huggingface.co/hf-inference/models
+  HF_TOKEN      token gratuito do tipo Read da Hugging Face (usado para baixar o modelo)
+  HF_MODEL      padrão: Xenova/distilbert-base-multilingual-cased-sentiments-student
   TOKEN_DISPOSITIVO (opcional) se definido, o POST exige o cabeçalho X-Token-Dispositivo
+
+IA (caminho A - Hugging Face): o modelo de sentimento é baixado do Hub da Hugging Face
+na primeira chamada e roda dentro da própria Lambda com onnxruntime. Desde outubro de 2026
+a API de inferência gratuita da Hugging Face passou a cobrar crédito (erro 402), então
+trazer o modelo para dentro da função foi o jeito de manter a IA funcionando sem custo.
 """
 
 import json
 import logging
 import os
 import re
+import shutil
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
+import numpy as np
+import onnxruntime as ort
 import pg8000 as driver   # Python puro: pip install pg8000 -t pacote/
+from tokenizers import Tokenizer
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-HF_MODEL = os.environ.get("HF_MODEL", "cardiffnlp/twitter-xlm-roberta-base-sentiment")
-HF_API_URL = os.environ.get("HF_API_URL", "https://router.huggingface.co/hf-inference/models")
+HF_MODEL = os.environ.get("HF_MODEL", "Xenova/distilbert-base-multilingual-cased-sentiments-student")
 HF_TOKEN = os.environ.get("HF_TOKEN")
+PASTA_MODELO = "/tmp/modelo"
+ARQUIVOS_MODELO = {               # arquivo no Hub -> nome local
+    "config.json": "config.json",
+    "tokenizer.json": "tokenizer.json",
+    "onnx/model_quantized.onnx": "model.onnx",
+}
+_modelo = None                    # fica na memória entre as chamadas da mesma instância
 TOKEN_DISPOSITIVO = os.environ.get("TOKEN_DISPOSITIVO")
 
 # Limiares do Alerta Criadouro (os mesmos do ESP32 e da API Flask)
@@ -113,29 +127,59 @@ def classificar_risco(dias, temperatura=None, umidade=None):
     return "atencao"
 
 
+def baixar_do_hub(arquivo, destino):
+    url = f"https://huggingface.co/{HF_MODEL}/resolve/main/{arquivo}"
+    cabecalhos = {"Authorization": f"Bearer {HF_TOKEN}"} if HF_TOKEN else {}
+    requisicao = urllib.request.Request(url, headers=cabecalhos)
+    with urllib.request.urlopen(requisicao, timeout=25) as resp, open(destino + ".parte", "wb") as saida:
+        shutil.copyfileobj(resp, saida, 1024 * 1024)
+    os.replace(destino + ".parte", destino)
+
+
+def carregar_modelo():
+    """Baixa o modelo da Hugging Face uma vez por instância e deixa pronto na memória."""
+    global _modelo
+    if _modelo is not None:
+        return _modelo
+    os.makedirs(PASTA_MODELO, exist_ok=True)
+    for arquivo, nome_local in ARQUIVOS_MODELO.items():
+        destino = os.path.join(PASTA_MODELO, nome_local)
+        if not os.path.exists(destino):
+            baixar_do_hub(arquivo, destino)
+    tokenizador = Tokenizer.from_file(os.path.join(PASTA_MODELO, "tokenizer.json"))
+    tokenizador.enable_truncation(max_length=128)
+    sessao = ort.InferenceSession(os.path.join(PASTA_MODELO, "model.onnx"), providers=["CPUExecutionProvider"])
+    with open(os.path.join(PASTA_MODELO, "config.json"), encoding="utf-8") as arq:
+        rotulos = {int(k): v for k, v in json.load(arq)["id2label"].items()}
+    entradas = {e.name for e in sessao.get_inputs()}
+    _modelo = (tokenizador, sessao, rotulos, entradas)
+    logger.info("MODELO CARREGADO %s", HF_MODEL)
+    return _modelo
+
+
 def analisar_relato(texto):
     """
     Caminho A - Hugging Face. Classifica o sentimento do relato da família.
     Se a IA falhar, devolve (None, None) e a ingestão continua normalmente.
     """
-    if not texto or not HF_TOKEN:
+    if not texto:
         return None, None
-    requisicao = urllib.request.Request(
-        f"{HF_API_URL}/{HF_MODEL}",
-        data=json.dumps({"inputs": texto}).encode("utf-8"),
-        headers={"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "application/json"},
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(requisicao, timeout=20) as resp:
-            saida = json.loads(resp.read().decode("utf-8"))
-        lista = saida[0] if saida and isinstance(saida[0], list) else saida
-        melhor = max(lista, key=lambda item: item["score"])
-        return melhor["label"], round(float(melhor["score"]), 4)
+        tokenizador, sessao, rotulos, entradas = carregar_modelo()
+        codificado = tokenizador.encode(texto)
+        dados = {
+            "input_ids": np.array([codificado.ids], dtype=np.int64),
+            "attention_mask": np.array([codificado.attention_mask], dtype=np.int64),
+        }
+        logits = sessao.run(None, {k: v for k, v in dados.items() if k in entradas})[0][0]
+        probabilidades = np.exp(logits - logits.max())
+        probabilidades = probabilidades / probabilidades.sum()
+        melhor = int(probabilidades.argmax())
+        return rotulos[melhor], round(float(probabilidades[melhor]), 4)
     except urllib.error.HTTPError as erro:
-        logger.warning("IA INDISPONIVEL - Hugging Face respondeu %s: %s", erro.code, erro.read()[:200])
-    except Exception as erro:  # timeout, DNS, resposta estranha
-        logger.warning("IA INDISPONIVEL - falha ao chamar a Hugging Face: %s", erro)
+        logger.warning("IA INDISPONIVEL - Hugging Face respondeu %s ao baixar o modelo", erro.code)
+    except Exception as erro:  # timeout, falta de espaço, arquivo corrompido
+        logger.warning("IA INDISPONIVEL - falha ao usar o modelo: %s", erro)
     return None, None
 
 
@@ -241,7 +285,8 @@ def lambda_handler(evento, contexto):
     try:
         if caminho == "/health":
             return resposta(200, {"status": "ok", "projeto": "alerta-criadouro", "modelo": HF_MODEL,
-                                  "ia_ativa": bool(HF_TOKEN)})
+                                  "token_hf_configurado": bool(HF_TOKEN),
+                                  "modelo_na_memoria": _modelo is not None})
         if caminho == "/ocorrencias" and metodo == "POST":
             return rota_ingestao(evento)
         if caminho == "/ocorrencias" and metodo == "GET":

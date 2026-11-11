@@ -1,8 +1,9 @@
 """
 Alerta Criadouro - teste local da Lambda, sem AWS
-Finge o banco (pg8000) e a Hugging Face para conferir as rotas e o log antes de publicar.
+Finge o banco (pg8000) e o modelo da Hugging Face para conferir as rotas e o log antes de publicar.
 Uso: python3 teste_local.py
 """
+import importlib.util
 import json
 import logging
 import os
@@ -39,6 +40,13 @@ class Conexao:
 falso = types.ModuleType("pg8000")
 falso.connect = lambda **kw: Conexao()
 sys.modules["pg8000"] = falso
+
+# se as bibliotecas do modelo não estiverem instaladas, entra um módulo vazio (a IA é fingida abaixo)
+for nome in ("numpy", "onnxruntime", "tokenizers"):
+    if importlib.util.find_spec(nome) is None:
+        modulo = types.ModuleType(nome)
+        modulo.Tokenizer = object
+        sys.modules[nome] = modulo
 
 os.environ.update(DB_HOST="rds.local", DB_NAME="alertacriadouro", DB_USER="postgres",
                   DB_PASSWORD="teste", HF_TOKEN="teste")
