@@ -25,6 +25,10 @@ ESP32 no quintal (DHT22 + HC-SR04)  ->  LED e buzzer avisam na hora
         |  JSON
         v
 API em Python (Flask)  ->  valida, classifica e grava em CSV
+        |                        |
+        |                        |  mesmo JSON
+        |                        v
+        |                  AWS Lambda  ->  RDS PostgreSQL + IA do relato + CloudWatch
         |
         |  GET /previsao
         v
@@ -39,6 +43,14 @@ Mensagem para a família
 - **ALERTA (vermelho):** água há 3 dias ou mais com calor e umidade altos, ou há 5 dias em qualquer clima.
 
 Os modelos de IA usam dados reais do InfoDengue (Fiocruz e FGV) da cidade de São Paulo, de 2015 a 2025.
+
+## Diagramas UML
+
+O diagrama de casos de uso mostra quem usa o sistema e o que ainda é evolução futura. O de sequência mostra o caminho de uma leitura, do sensor até o aviso.
+
+![Casos de uso](docs/imagens/uml_casos_de_uso.png)
+
+![Sequência](docs/imagens/uml_sequencia.png)
 
 ## Pastas
 
@@ -60,7 +72,7 @@ Os modelos de IA usam dados reais do InfoDengue (Fiocruz e FGV) da cidade de Sã
 - **Estatística:** a temperatura média da semana tem correlação de 0,41 com o Rt da dengue. A regressão logística acerta 69,8% das semanas em que a dengue está se espalhando.
 - **Machine Learning:** Random Forest ajustado com F1 de 0,954 no teste (2023 a 2025). Ele avisou o risco alto do começo da epidemia de 2024 uma semana antes do que repetir o nível atual.
 - **Redes Neurais:** LSTM com erro menor que o modelo ingênuo nas 4 semanas à frente, ligada à API pela rota GET /previsao.
-- **AWS:** Lambda com Function URL recebe as leituras, registra tudo no CloudWatch, lê o relato da família com um modelo da Hugging Face e grava no RDS PostgreSQL. No teste, 10 leituras gravadas e alerta crítico a partir do dia 4.
+- **AWS:** Lambda com Function URL recebe as leituras, registra tudo no CloudWatch, lê o relato da família com um modelo da Hugging Face e grava no RDS PostgreSQL. No teste, 10 leituras gravadas e alerta crítico a partir do dia 4. Quando a variável `URL_NUVEM` está definida, a API em Flask reenvia cada leitura aceita para a Lambda; se a nuvem não responder, a API registra no log e continua funcionando.
 
 ## Como rodar
 
@@ -74,6 +86,7 @@ Os modelos de IA usam dados reais do InfoDengue (Fiocruz e FGV) da cidade de Sã
 cd api
 pip install flask requests pandas numpy scikit-learn tensorflow
 export TOKEN_DISPOSITIVO=ac-quintal-001-demo
+export URL_NUVEM=https://endereco-da-function-url   # opcional: liga a API na Lambda da AWS
 python app.py
 ```
 
