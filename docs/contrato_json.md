@@ -101,4 +101,4 @@ Leitura recusada por faltar campo ou por valor errado (HTTP 400):
 
 ## Segurança
 
-O dispositivo manda junto um cabeçalho `X-Token-Dispositivo`. Sem ele a API responde 401. O token fica guardado em variável de ambiente, nunca escrito no código. Isso é explicado no relatório de Cybersecurity.
+O dispositivo manda junto um cabeçalho `X-Token-Dispositivo`. Sem ele a API responde 401. Na API o token fica guardado em variável de ambiente, nunca escrito no código. No protótipo do Wokwi ele aparece no sketch porque é um token só de demonstração. No aparelho de verdade ele seria gravado no ESP32 na instalação, fora do código publicado. Isso é explicado no relatório de Cybersecurity.
